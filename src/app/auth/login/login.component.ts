@@ -1,10 +1,30 @@
 import { Component } from '@angular/core';
 import {
+  AbstractControl,
   FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { of } from 'rxjs';
+
+// custom validator
+
+function mustContainQuestionMark(control: AbstractControl) {
+  if (control.value.includes('?')) {
+    return null;
+  }
+  return { doesNotContainQuestionMark: true };
+}
+
+//  async validator
+
+function emailIsUnique(control: AbstractControl) {
+  if (control.value === 'test@example.com') {
+    return of(null);
+  }
+  return of({ notUnique: true });
+}
 
 @Component({
   selector: 'app-login',
@@ -22,8 +42,9 @@ export class LoginComponent {
       validators: [
         Validators.minLength(6),
         Validators.required,
-        Validators.maxLength(10),
+        mustContainQuestionMark,
       ],
+      asyncValidators: [emailIsUnique],
     }),
   });
 
