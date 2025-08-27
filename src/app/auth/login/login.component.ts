@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import {
   AbstractControl,
   FormControl,
@@ -6,7 +6,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { of } from 'rxjs';
+import { debounceTime, of } from 'rxjs';
 
 // custom validator
 
@@ -33,10 +33,12 @@ function emailIsUnique(control: AbstractControl) {
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
+  private destroyRef = inject(DestroyRef);
   myForm = new FormGroup({
     email: new FormControl('', {
       validators: [Validators.email, Validators.required],
+      asyncValidators: [emailIsUnique],
     }),
     password: new FormControl('', {
       validators: [
@@ -44,7 +46,6 @@ export class LoginComponent {
         Validators.required,
         mustContainQuestionMark,
       ],
-      asyncValidators: [emailIsUnique],
     }),
   });
 
@@ -63,7 +64,30 @@ export class LoginComponent {
       this.myForm.controls.password.invalid
     );
   }
+  ngOnInit(): void {
+    // const savedForm = window.localStorage.getItem('save-login');
 
+    // if (savedForm) {
+    //   const loadedForm = JSON.parse(savedForm);
+    //   this.myForm.patchValue({
+    //     email: loadedForm.email,
+    //   });
+    // }
+    const subscription = this.myForm.valueChanges
+      .pipe(debounceTime(500))
+      .subscribe({
+        next: (val) =>
+          window.localStorage.setItem(
+            'save-login',
+            JSON.stringify({
+              email: val.email,
+            })
+          ),
+      });
+    this.destroyRef.onDestroy(() => {
+      subscription.unsubscribe();
+    });
+  }
   onSubmit() {
     console.log(this.myForm);
     const enteredEmail = this.myForm.value.email;
